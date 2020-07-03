@@ -1,0 +1,58 @@
+# This docker-compose file will spin up an ACS cluster on a local host or on a server and it requires a minimum of 12GB Memory to distribute among containers.
+# Limit container memory and assign X percentage to JVM.  There are couple of ways to allocate JVM Memory for ACS Containers
+# For example: 'JAVA_OPTS: "$JAVA_OPTS -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"'
+# But, as per Oracle docs (https://docs.oracle.com/javase/9/gctuning/parallel-collector1.htm#JSGCT-GUID-CAB83393-3438-44ED-98F0-D15641B43C7D)
+# If container memory is not explicitly set, then the above flags will default max heap to 1/4th of container's memory which may not be ideal.
+# Hence, setting up explicit Container memory and then assigning a percentage of it to the JVM for performance tuning.
+
+# Using version 2 as 3 does not support resource constraint options (cpu_*, mem_* limits) for non swarm mode in Compose
+version: "2"
+
+services:
+    fuseki:
+        container_name: apache-fuseki
+        image: stain/jena-fuseki
+        environment:
+           - ADMIN_PASSWORD=admin
+           - JVM_ARGS=-Xmx2g
+        ports:
+           - 3030:3030
+
+    #skosmos:
+    #    container_name: skosmos
+    #    image: skosmos_skosmos
+    #    volumes:
+    #       - .:/var/www/html
+    #    ports:
+    #       - 8000:80
+    #    depends_on:
+    #       - fuseki
+
+    zookeeper:
+        image: bitnami/zookeeper:latest
+        hostname: zookeeper
+        container_name: zookeeper
+        environment:
+            - ALLOW_ANONYMOUS_LOGIN=yes
+              
+    neo4j:
+        image: neo4j:latest
+        hostname: neo4j
+        container_name: neo4j
+        #network_mode: "bridge"
+        ports:
+          - "7474:7474"
+          - "7687:7687"
+        environment:
+          - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+          - NEO4J_apoc_import_file_enabled=true
+          - NEO4J_dbms_shell_enabled=true
+          - NEO4J_AUTH=neo4j/dardo
+          - dbms.security.auth_enabled=false
+        volumes:
+          # - ./plugins:/plugins
+          - ./data:/data
+          # - ./import:/import
+
+
+
